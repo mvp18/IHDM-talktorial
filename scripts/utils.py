@@ -152,8 +152,7 @@ def load_model_from_checkpoint_dir(config, checkpoint_dir, device):
     """
     model = create_model(config, device)
     optimizer = get_optimizer(config, model.parameters())
-    ema = ExponentialMovingAverage(
-        model.parameters(), decay=config.model.ema_rate)
+    ema = ExponentialMovingAverage(model.parameters(), decay=config.model.ema_rate)
     state = dict(optimizer=optimizer, model=model, step=0, ema=ema)
     checkpoint_path = os.path.join(checkpoint_dir, 'checkpoint.pth')
     state = restore_checkpoint(checkpoint_path, state, device=device)
