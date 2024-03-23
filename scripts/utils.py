@@ -18,13 +18,14 @@ def safe_state(seed, device):
 
     random.seed(seed)
     np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
+    torch.manual_seed(seed)    
     
-    torch.cuda.set_device(device)
-    torch.backends.cudnn.benchmark = True
-    torch.backends.cudnn.enabled = True
-    torch.backends.cudnn.deterministic = True
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)    
+        torch.cuda.set_device(device)
+        torch.backends.cudnn.benchmark = True
+        torch.backends.cudnn.enabled = True
+        torch.backends.cudnn.deterministic = True
 
 
 def restore_checkpoint(ckpt_dir, state, device):
@@ -84,8 +85,7 @@ def save_video(save_dir, samples):
     for idx in range(len(samples)):
         sample = samples[idx].cpu().detach().numpy()
         sample = np.clip(sample * 255, 0, 255)
-        image_grid = make_grid(torch.Tensor(sample), nrow, padding=padding).numpy(
-        ).transpose(1, 2, 0).astype(np.uint8)
+        image_grid = make_grid(torch.Tensor(sample), nrow, padding=padding).numpy().transpose(1, 2, 0).astype(np.uint8)
         image_grid = cv2.cvtColor(image_grid, cv2.COLOR_RGB2BGR)
         imgs.append(image_grid)
     #video_size = tuple(reversed(tuple(5*s for s in imgs[0].shape[:2])))
@@ -145,7 +145,7 @@ def save_png(save_dir, data, name, nrow=None):
         save_image(image_grid, fout)
 
 
-def load_model_from_checkpoint_dir(config, checkpoint_dir, device):
+def load_model_from_checkpoint_dir(config, checkpoint_dir, device, suffix="_cifar10"):
     """Another input definition for the restore_checkpoint wrapper,
     without a specified checkpoint number. 
     Assumes that the folder has file "checkpoint.pth"
@@ -154,7 +154,7 @@ def load_model_from_checkpoint_dir(config, checkpoint_dir, device):
     optimizer = get_optimizer(config, model.parameters())
     ema = ExponentialMovingAverage(model.parameters(), decay=config.model.ema_rate)
     state = dict(optimizer=optimizer, model=model, step=0, ema=ema)
-    checkpoint_path = os.path.join(checkpoint_dir, 'checkpoint.pth')
+    checkpoint_path = os.path.join(checkpoint_dir, f'checkpoint{suffix}.pth')
     state = restore_checkpoint(checkpoint_path, state, device=device)
     logging.info("Loaded model from {}".format(checkpoint_dir))
     model = state['model']
